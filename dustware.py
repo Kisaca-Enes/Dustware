@@ -21,6 +21,7 @@ print("""
 2.ramsoware pyload
 3:server
 4:macro exploits
+5:kalıcılık
 -----------------
 """)
 x = input("seçin: ")
@@ -31,5 +32,7 @@ elif x == "2":
 elif x == "3":
 	os.system("python3 server.py")
 elif x == "4":
+	os.system("python3 macro.py")
+elif x == "5":
 	os.system("python3 macro.py")
 	
