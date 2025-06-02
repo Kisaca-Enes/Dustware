@@ -23,6 +23,7 @@ print("""
 4:macro exploits
 5:kalıcılık
 6:bypass
+7:generator
 -----------------
 """)
 x = input("seçin: ")
@@ -38,3 +39,5 @@ elif x == "5":
 	os.system("python3 kalıcılık.py")
 elif x == "6":
 	os.system("python3 bypass.py")
+elif x == "7":
+	os.system("python3 generator.py")
