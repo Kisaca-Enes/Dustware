@@ -24,7 +24,7 @@ using System;
 using System.Runtime.InteropServices;
 
 public class NativeDLL {
-    [DllImport("C:\Users\YourUser\Desktop\file_read_open.dll")]
+    [DllImport("C:\Users\Null\Desktop\file_read_open.dll")]
     public static extern void OpenAllFiles();
 }
 "@
